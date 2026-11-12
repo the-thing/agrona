@@ -1783,16 +1783,18 @@ public abstract class AbstractMutableDirectBuffer implements MutableDirectBuffer
             }
         }
 
-        for (; i < length; i++)
-        {
-            final int cmp = Byte.compare(
-                UnsafeApi.getByte(thisArray, thisOffset + i),
-                UnsafeApi.getByte(thatArray, thatOffset + i));
+        long thisCarry = 0L;
+        long thatCarry = 0L;
 
-            if (0 != cmp)
-            {
-                return cmp;
-            }
+        for (int bitIndex = 56; i < length; i++, bitIndex -= 8)
+        {
+            thisCarry |= (UnsafeApi.getByte(thisArray, thisOffset + i) & 0xFFL) << bitIndex;
+            thatCarry |= (UnsafeApi.getByte(thatArray, thatOffset + i) & 0xFFL) << bitIndex;
+        }
+
+        if (thisCarry != thatCarry)
+        {
+            return Long.compare(thisCarry, thatCarry);
         }
 
         return Integer.compare(thisCapacity, thatCapacity);
