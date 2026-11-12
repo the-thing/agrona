@@ -1771,28 +1771,48 @@ public abstract class AbstractMutableDirectBuffer implements MutableDirectBuffer
         final int length = Math.min(thisCapacity, thatCapacity);
         int i = 0;
 
-        for (int end = length & ~7; i < end; i += 8)
+        if (NATIVE_BYTE_ORDER == ByteOrder.LITTLE_ENDIAN)
         {
-            final int cmp = Long.compare(
-                UnsafeApi.getLong(thisArray, thisOffset + i),
-                UnsafeApi.getLong(thatArray, thatOffset + i));
-
-            if (0 != cmp)
+            for (int end = length & ~7; i < end; i += 8)
             {
-                return cmp;
+                long a = UnsafeApi.getLong(thisArray, thisOffset + i);
+                long b = UnsafeApi.getLong(thatArray, thatOffset + i);
+
+                if (a != b)
+                {
+                    a = Long.reverseBytes(a);
+                    b = Long.reverseBytes(b);
+
+                    return Long.compareUnsigned(a, b);
+                }
+            }
+        }
+        else
+        {
+            for (int end = length & ~7; i < end; i += 8)
+            {
+                final long a = UnsafeApi.getLong(thisArray, thisOffset + i);
+                final long b = UnsafeApi.getLong(thatArray, thatOffset + i);
+
+                if (a != b)
+                {
+                    return Long.compareUnsigned(a, b);
+                }
             }
         }
 
-        for (; i < length; i++)
-        {
-            final int cmp = Byte.compare(
-                UnsafeApi.getByte(thisArray, thisOffset + i),
-                UnsafeApi.getByte(thatArray, thatOffset + i));
+        long thisCarry = 0L;
+        long thatCarry = 0L;
 
-            if (0 != cmp)
-            {
-                return cmp;
-            }
+        for (int bitIndex = 56; i < length; i++, bitIndex -= 8)
+        {
+            thisCarry |= (UnsafeApi.getByte(thisArray, thisOffset + i) & 0xFFL) << bitIndex;
+            thatCarry |= (UnsafeApi.getByte(thatArray, thatOffset + i) & 0xFFL) << bitIndex;
+        }
+
+        if (thisCarry != thatCarry)
+        {
+            return Long.compareUnsigned(thisCarry, thatCarry);
         }
 
         return Integer.compare(thisCapacity, thatCapacity);
