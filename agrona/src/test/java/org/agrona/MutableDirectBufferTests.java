@@ -509,23 +509,19 @@ public abstract class MutableDirectBufferTests
     @Test
     void compareToIsTransitive()
     {
-        final MutableDirectBuffer a = newBuffer(7);
-        a.putBytes(0, new byte[]{ 0, 0x01, 0, 0, 0, 0, 0 });
+        final MutableDirectBuffer a = newBuffer(15);
+        a.putBytes(0, new byte[]{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01, 0, 0, 0, 0, 0 });
 
-        final MutableDirectBuffer b = newBuffer(8);
-        b.putBytes(0, new byte[]{ 0, 0x01, 0, 0, 0, 0, 0, 0 });
+        final MutableDirectBuffer b = newBuffer(16);
+        b.putBytes(0, new byte[]{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01, 0, 0, 0, 0, 0, 0 });
 
-        final MutableDirectBuffer c = newBuffer(8);
-        c.putBytes(0, new byte[]{ 0, (byte)0x80, 0, 0, 0, 0, 0, 0 });
+        final MutableDirectBuffer c = newBuffer(16);
+        c.putBytes(0, new byte[]{ 0, 0, 0, 0, 0, 0, 0, 0, 0, (byte)0x80, 0, 0, 0, 0, 0, 0 });
 
         // IF (A < B) AND (B < C) THEN (A < C)
-        final boolean aLessThanB = a.compareTo(b) < 0;
-        final boolean bLessThanC = b.compareTo(c) < 0;
-        final boolean aLessThanC = a.compareTo(c) < 0;
-
-        assertTrue(aLessThanB, "a < b");
-        assertTrue(bLessThanC, "b < c");
-        assertTrue(aLessThanC, "a < c");
+        assertTrue(a.compareTo(b) < 0, "a < b");
+        assertTrue(b.compareTo(c) < 0, "b < c");
+        assertTrue(a.compareTo(c) < 0, "a < c");
     }
 
     @Test
@@ -544,6 +540,13 @@ public abstract class MutableDirectBufferTests
         assertEquals(Math.signum(a.compareTo(b)), -Math.signum(b.compareTo(a)));
         assertEquals(Math.signum(a.compareTo(c)), -Math.signum(c.compareTo(a)));
         assertEquals(Math.signum(b.compareTo(c)), -Math.signum(c.compareTo(b)));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenComparingToNull()
+    {
+        final MutableDirectBuffer buffer = newBuffer(8);
+        assertThrows(NullPointerException.class, () -> buffer.compareTo(null));
     }
 
     @ParameterizedTest

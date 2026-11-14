@@ -1773,13 +1773,18 @@ public abstract class AbstractMutableDirectBuffer implements MutableDirectBuffer
 
         for (int end = length & ~7; i < end; i += 8)
         {
-            final int cmp = Long.compare(
-                UnsafeApi.getLong(thisArray, thisOffset + i),
-                UnsafeApi.getLong(thatArray, thatOffset + i));
+            long a = UnsafeApi.getLong(thisArray, thisOffset + i);
+            long b = UnsafeApi.getLong(thatArray, thatOffset + i);
 
-            if (0 != cmp)
+            if (a != b)
             {
-                return cmp;
+                if (NATIVE_BYTE_ORDER == ByteOrder.LITTLE_ENDIAN)
+                {
+                    a = Long.reverseBytes(a);
+                    b = Long.reverseBytes(b);
+                }
+
+                return Long.compareUnsigned(a, b);
             }
         }
 
@@ -1794,7 +1799,7 @@ public abstract class AbstractMutableDirectBuffer implements MutableDirectBuffer
 
         if (thisCarry != thatCarry)
         {
-            return Long.compare(thisCarry, thatCarry);
+            return Long.compareUnsigned(thisCarry, thatCarry);
         }
 
         return Integer.compare(thisCapacity, thatCapacity);
