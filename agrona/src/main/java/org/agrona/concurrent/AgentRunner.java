@@ -135,6 +135,16 @@ public class AgentRunner implements Runnable, AutoCloseable
     }
 
     /**
+     * Has the {@link Agent} been running?
+     *
+     * @return has the {@link Agent} been started successfully and not closed?
+     */
+    public boolean isRunning()
+    {
+        return isRunning;
+    }
+
+    /**
      * Has the {@link Agent} been closed?
      *
      * @return has the {@link Agent} been closed?
