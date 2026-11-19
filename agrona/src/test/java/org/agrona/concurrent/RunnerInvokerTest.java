@@ -23,6 +23,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
+import java.util.Random;
+
 import static java.nio.ByteBuffer.allocateDirect;
 import static org.agrona.concurrent.status.CountersReader.COUNTER_LENGTH;
 import static org.agrona.concurrent.status.CountersReader.METADATA_LENGTH;
@@ -187,5 +189,93 @@ class RunnerInvokerTest
 
         assertEquals(true, runner.isRunning()); // FIXME this is different
         assertEquals(true, runner.isClosed());
+    }
+
+    @Test
+    void foo() throws Exception
+    {
+        final Error error = new Error();
+        doThrow(error).when(agent).doWork();
+
+        try (final AgentRunner runner = new AgentRunner(YieldingIdleStrategy.INSTANCE, errorHandler, errorCounter, agent)) {
+            final Thread thread = AgentRunner.startOnThread(runner);
+            thread.join();
+
+            verify(agent, times(1)).onStart();
+            verify(agent, times(1)).doWork();
+            verify(agent, times(1)).roleName();
+            verify(agent, never()).onClose();
+            verifyNoMoreInteractions(agent);
+
+            verify(errorHandler).onError(error);
+            verifyNoMoreInteractions(errorHandler);
+
+            assertEquals(true, runner.isRunning());
+            // assertEquals(false, runner.isClosed()); // FIXME - this is different from invoker
+
+            // assertEquals(false, runner.isRunning()); // FIXME this is different
+            assertEquals(true, runner.isClosed());
+        }
+
+        // FIXME which means that closing runner doesn't call Agent#onClose
+        // verify(agent, times(1)).onClose();
+        verifyNoMoreInteractions(agent);
+        verifyNoMoreInteractions(errorHandler);
+    }
+
+    @Test
+    void bar() throws Exception
+    {
+        final Error error = new Error();
+        doThrow(error).when(agent).doWork();
+
+        final Agent agent = new Agent() {
+
+            private final Random random = new Random();
+
+            @Override
+            public int doWork() {
+                Thread.yield();
+                System.out.println("Dupa");
+
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+                return random.nextInt(1);
+            }
+
+            @Override
+            public String roleName() {
+                return "some-role";
+            }
+        };
+
+        try (final AgentRunner runner = new AgentRunner(YieldingIdleStrategy.INSTANCE, errorHandler, errorCounter, agent))
+        {
+            final Thread thread = AgentRunner.startOnThread(runner);
+            thread.join();
+
+            verify(agent, times(1)).onStart();
+            verify(agent, times(1)).doWork();
+            verify(agent, times(1)).roleName();
+            verify(agent, never()).onClose();
+            verifyNoMoreInteractions(agent);
+
+            verify(errorHandler).onError(error);
+            verifyNoMoreInteractions(errorHandler);
+
+            assertEquals(true, runner.isRunning());
+            // assertEquals(false, runner.isClosed()); // FIXME - this is different from invoker
+
+            // assertEquals(false, runner.isRunning()); // FIXME this is different
+            assertEquals(true, runner.isClosed());
+        }
+
+        // FIXME which means that closing runner doesn't call Agent#onClose
+        // verify(agent, times(1)).onClose();
+        verifyNoMoreInteractions(agent);
+        verifyNoMoreInteractions(errorHandler);
     }
 }
