@@ -59,17 +59,30 @@ final class SharedLibraryLoader
 
             final String suffix = resourcePath.substring(resourcePath.lastIndexOf('.'));
             final Path tempFile = Files.createTempFile("agrona-native-lib", suffix);
-            tempFile.toFile().deleteOnExit();
 
-            // Write into the file createTempFile made, keeping its owner-only permissions
-            try (OutputStream out = Files.newOutputStream(tempFile, WRITE, TRUNCATE_EXISTING))
+            try
             {
-                in.transferTo(out);
+                // Write into the file createTempFile made, keeping its owner-only permissions
+                try (OutputStream out = Files.newOutputStream(tempFile, WRITE, TRUNCATE_EXISTING))
+                {
+                    in.transferTo(out);
+                }
+
+                try
+                {
+                    System.load(tempFile.toAbsolutePath().toString());
+                }
+                catch (final UnsatisfiedLinkError | SecurityException ex)
+                {
+                    ex.printStackTrace(System.err);
+                    return false;
+                }
+            }
+            finally
+            {
+                tempFile.toFile().delete();
             }
 
-            System.load(tempFile.toAbsolutePath().toString());
-            // Can be safely deleted since the file has been loaded to memory
-            tempFile.toFile().delete();
             return true;
         }
         catch (final IOException ex)
